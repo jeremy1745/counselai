@@ -22,18 +22,36 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // Auth
 export const register = (email: string, password: string) =>
-  request<{ access_token: string; user: User }>('/auth/register', {
+  request<{ access_token: string; user: User; force_password_change: boolean }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   })
 
 export const login = (email: string, password: string) =>
-  request<{ access_token: string; user: User }>('/auth/login', {
+  request<{ access_token: string; user: User; force_password_change: boolean }>('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   })
 
 export const getMe = () => request<User>('/auth/me')
+
+export const changePassword = (oldPassword: string, newPassword: string) =>
+  request<void>('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+  })
+
+// Admin
+export const listUsers = () => request<User[]>('/admin/users')
+
+export const disableUser = (userId: string) =>
+  request<User>(`/admin/users/${userId}/disable`, { method: 'PATCH' })
+
+export const enableUser = (userId: string) =>
+  request<User>(`/admin/users/${userId}/enable`, { method: 'PATCH' })
+
+export const forcePasswordChange = (userId: string) =>
+  request<User>(`/admin/users/${userId}/force-password-change`, { method: 'PATCH' })
 
 // Cases
 export const createCase = (data: { name: string; description?: string }) =>

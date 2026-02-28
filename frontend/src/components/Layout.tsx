@@ -11,6 +11,14 @@ export default function Layout() {
         <span className="text-sm text-slate-400">AI Legal Assistant</span>
         {user && (
           <div className="ml-auto flex items-center gap-3">
+            {user.role === 'superadmin' && (
+              <Link
+                to="/admin/users"
+                className="text-sm text-slate-400 hover:text-white transition-colors"
+              >
+                Manage Users
+              </Link>
+            )}
             <span className="text-sm text-slate-300">{user.email}</span>
             {user.role === 'superadmin' && (
               <span className="text-xs px-2 py-0.5 bg-indigo-600 text-white rounded-full font-medium">

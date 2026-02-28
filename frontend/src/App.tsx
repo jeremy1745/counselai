@@ -4,9 +4,11 @@ import Layout from './components/Layout'
 import CaseList from './components/CaseList'
 import CaseDetail from './components/CaseDetail'
 import LoginPage from './components/LoginPage'
+import ChangePasswordPage from './components/ChangePasswordPage'
+import AdminUsersPage from './components/AdminUsersPage'
 
 function AppRoutes() {
-  const { user, loading } = useAuth()
+  const { user, loading, forcePasswordChange } = useAuth()
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading...</div>
@@ -21,11 +23,18 @@ function AppRoutes() {
     )
   }
 
+  if (forcePasswordChange) {
+    return <ChangePasswordPage />
+  }
+
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<CaseList />} />
         <Route path="/cases/:caseId/*" element={<CaseDetail />} />
+        {user.role === 'superadmin' && (
+          <Route path="/admin/users" element={<AdminUsersPage />} />
+        )}
       </Route>
       <Route path="/login" element={<Navigate to="/" replace />} />
     </Routes>

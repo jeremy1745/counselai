@@ -2,6 +2,9 @@ export interface User {
   id: string
   email: string
   role: 'user' | 'superadmin'
+  is_disabled: boolean
+  force_password_change: boolean
+  created_at: string
 }
 
 export interface Case {
