@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     upload_dir: str = "./data/uploads"
 
     embedding_model: str = "nomic-embed-text"
-    chat_model: str = "llama3.1"
+    chat_model: str = "llama3.2:3b"
     chunk_size: int = 512
     chunk_overlap: int = 64
     top_k: int = 10
