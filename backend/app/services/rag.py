@@ -8,7 +8,7 @@ from app.config import settings
 from app.services.embedding import embed_query
 from app.services.vector_store import search_chunks
 
-SYSTEM_PROMPT_TEMPLATE = """You are CounselAI, an AI legal research assistant. Answer the user's question based ONLY on the provided source documents. Follow these rules strictly:
+SYSTEM_PROMPT_TEMPLATE = """You are CAISE, an AI legal research assistant. Answer the user's question based ONLY on the provided source documents. Follow these rules strictly:
 
 1. Only use information from the sources below. If the sources don't contain relevant information, say so.
 2. Cite your sources using [Source N] notation inline where N corresponds to the source number.

@@ -29,18 +29,18 @@ export default function DocumentUpload({ caseId }: { caseId: string }) {
     <div
       {...getRootProps()}
       className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-        isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+        isDragActive ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 hover:border-slate-400'
       }`}
     >
       <input {...getInputProps()} />
       {mutation.isPending ? (
-        <p className="text-sm text-gray-500">Uploading...</p>
+        <p className="text-sm text-slate-500">Uploading...</p>
       ) : isDragActive ? (
-        <p className="text-sm text-blue-600">Drop PDFs here</p>
+        <p className="text-sm text-indigo-600">Drop PDFs here</p>
       ) : (
         <div>
-          <p className="text-sm text-gray-600">Drag & drop PDF files here, or click to select</p>
-          <p className="text-xs text-gray-400 mt-1">Only PDF files are accepted</p>
+          <p className="text-sm text-slate-600">Drag & drop PDF files here, or click to select</p>
+          <p className="text-xs text-slate-400 mt-1">Only PDF files are accepted</p>
         </div>
       )}
       {mutation.isError && (

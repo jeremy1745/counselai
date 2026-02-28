@@ -11,6 +11,7 @@ export default function ChatWindow() {
   const queryClient = useQueryClient()
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const { data: messages } = useQuery({
     queryKey: ['messages', convId],
@@ -26,6 +27,10 @@ export default function ChatWindow() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamingContent])
+
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [convId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,7 +50,7 @@ export default function ChatWindow() {
     <div className="flex-1 flex flex-col">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {!messages?.length && !isStreaming && (
-          <div className="flex-1 flex items-center justify-center h-full text-gray-400 text-sm">
+          <div className="flex-1 flex items-center justify-center h-full text-slate-400 text-sm">
             Ask a question about your case documents
           </div>
         )}
@@ -57,11 +62,11 @@ export default function ChatWindow() {
         )}
         {isStreaming && !streamingContent && (
           <div className="flex justify-start">
-            <div className="px-4 py-3 rounded-2xl bg-white border border-gray-200">
+            <div className="px-4 py-3 rounded-2xl bg-white border border-slate-200">
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -69,20 +74,21 @@ export default function ChatWindow() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 bg-white">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-slate-200 bg-white">
         <div className="flex gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question about your case..."
             disabled={isStreaming}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isStreaming || !input.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Send
           </button>

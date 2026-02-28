@@ -20,12 +20,12 @@ function CaseSidebar({ caseId }: { caseId: string }) {
   }
 
   return (
-    <div className="w-80 border-r border-gray-200 bg-white flex flex-col overflow-y-auto">
-      <div className="p-4 border-b border-gray-200">
-        <Link to="/" className="text-xs text-blue-600 hover:text-blue-800">&larr; All Cases</Link>
-        <h2 className="text-lg font-bold text-gray-900 mt-1">{caseData?.name}</h2>
+    <div className="w-80 border-r border-slate-200 bg-white flex flex-col overflow-y-auto">
+      <div className="p-4 border-b border-slate-200">
+        <Link to="/" className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">&larr; All Cases</Link>
+        <h2 className="text-lg font-bold text-slate-900 mt-1">{caseData?.name}</h2>
         {caseData?.description && (
-          <p className="text-sm text-gray-500 mt-1">{caseData.description}</p>
+          <p className="text-sm text-slate-500 mt-1">{caseData.description}</p>
         )}
       </div>
 
@@ -34,10 +34,10 @@ function CaseSidebar({ caseId }: { caseId: string }) {
         <DocumentList caseId={caseId} />
       </div>
 
-      <div className="p-4 border-t border-gray-200 mt-auto">
+      <div className="p-4 border-t border-slate-200 mt-auto">
         <button
           onClick={handleNewChat}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors"
         >
           New Conversation
         </button>
@@ -47,7 +47,7 @@ function CaseSidebar({ caseId }: { caseId: string }) {
               <Link
                 key={conv.id}
                 to={`/cases/${caseId}/chat/${conv.id}`}
-                className="block px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md truncate"
+                className="block px-3 py-2 text-sm text-slate-700 hover:bg-stone-100 rounded-md truncate"
               >
                 {conv.title}
               </Link>
@@ -75,7 +75,7 @@ export default function CaseDetail() {
           <Route
             path="*"
             element={
-              <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+              <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
                 Upload documents and start a conversation
               </div>
             }

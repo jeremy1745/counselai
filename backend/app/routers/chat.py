@@ -1,8 +1,13 @@
+import json
+import logging
+
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import get_db
 from app.models.case import Case
 from app.models.conversation import Conversation
@@ -14,6 +19,8 @@ from app.schemas.chat import (
     MessageResponse,
 )
 from app.services.rag import stream_rag_response, extract_citations, embed_query, search_chunks
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
@@ -90,7 +97,6 @@ async def send_message(conv_id: str, body: MessageCreate, db: AsyncSession = Dep
             yield event
             # Parse the SSE data to capture final content
             if event.startswith("data: "):
-                import json
                 try:
                     data = json.loads(event[6:].strip())
                     if data.get("type") == "done":
@@ -110,9 +116,51 @@ async def send_message(conv_id: str, body: MessageCreate, db: AsyncSession = Dep
             save_db.add(assistant_msg)
             await save_db.commit()
 
+            # Auto-title on first exchange
+            msg_count = await save_db.scalar(
+                select(func.count()).where(Message.conversation_id == conv_id)
+            )
+            if msg_count == 2:  # first user + first assistant
+                title = await _generate_title(body.content)
+                conv_obj = await save_db.get(Conversation, conv_id)
+                if conv_obj:
+                    conv_obj.title = title
+                    await save_db.commit()
+
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
 async def _get_session():
     from app.database import async_session
     return async_session()
+
+
+async def _generate_title(user_message: str) -> str:
+    """Use the LLM to generate a short conversation title from the first message."""
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{settings.ollama_url}/api/chat",
+                json={
+                    "model": settings.chat_model,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Generate a short title (3-6 words) for a conversation that starts with the following message. Reply with ONLY the title, no quotes or punctuation.",
+                        },
+                        {"role": "user", "content": user_message},
+                    ],
+                    "stream": False,
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            title = data["message"]["content"].strip().strip('"').strip("'")
+            # Truncate if too long
+            if len(title) > 80:
+                title = title[:77] + "..."
+            return title
+    except Exception as e:
+        logger.warning(f"Failed to generate title: {e}")
+        # Fallback: first 50 chars of the message
+        return user_message[:50] + ("..." if len(user_message) > 50 else "")
