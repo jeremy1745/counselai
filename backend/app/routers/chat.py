@@ -1,9 +1,10 @@
 import json
 import logging
+import re
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +19,7 @@ from app.schemas.chat import (
     MessageCreate,
     MessageResponse,
 )
+from app.services.export import generate_markdown, generate_pdf
 from app.services.rag import stream_rag_response, extract_citations, embed_query, search_chunks
 
 logger = logging.getLogger(__name__)
@@ -68,6 +70,40 @@ async def get_messages(conv_id: str, db: AsyncSession = Depends(get_db)):
             created_at=msg.created_at,
         ))
     return response
+
+
+@router.get("/conversations/{conv_id}/export")
+async def export_conversation(
+    conv_id: str,
+    format: str = Query(..., pattern="^(pdf|markdown)$"),
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await db.get(Conversation, conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    case = await db.get(Case, conv.case_id)
+
+    result = await db.execute(
+        select(Message).where(Message.conversation_id == conv_id).order_by(Message.created_at.asc())
+    )
+    messages = result.scalars().all()
+
+    safe_title = re.sub(r'[^\w\s-]', '', conv.title).strip() or "conversation"
+
+    if format == "pdf":
+        data = generate_pdf(conv, case, messages)
+        return Response(
+            content=data,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{safe_title}.pdf"'},
+        )
+
+    md = generate_markdown(conv, case, messages)
+    return Response(
+        content=md.encode(),
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="{safe_title}.md"'},
+    )
 
 
 @router.post("/conversations/{conv_id}/messages")

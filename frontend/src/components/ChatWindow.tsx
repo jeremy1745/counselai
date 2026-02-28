@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { getMessages } from '../api/client'
+import { getMessages, exportConversation } from '../api/client'
 import { useChat } from '../hooks/useChat'
 import ChatMessage from './ChatMessage'
 import type { Message } from '../types'
@@ -18,6 +18,20 @@ export default function ChatWindow() {
     queryFn: () => getMessages(convId!),
     enabled: !!convId,
   })
+
+  const [exporting, setExporting] = useState(false)
+
+  const handleExport = async (format: 'pdf' | 'markdown') => {
+    if (!convId || exporting) return
+    setExporting(true)
+    try {
+      await exportConversation(convId, format)
+    } catch (e) {
+      console.error('Export failed', e)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const { streamingContent, isStreaming, citations, send } = useChat(() => {
     queryClient.invalidateQueries({ queryKey: ['messages', convId] })
@@ -48,6 +62,24 @@ export default function ChatWindow() {
 
   return (
     <div className="flex-1 flex flex-col">
+      {messages?.length ? (
+        <div className="flex items-center justify-end gap-2 px-4 py-2 border-b border-slate-200 bg-slate-50">
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={exporting}
+            className="px-3 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-100 disabled:opacity-50 transition-colors"
+          >
+            {exporting ? 'Exporting...' : 'Export PDF'}
+          </button>
+          <button
+            onClick={() => handleExport('markdown')}
+            disabled={exporting}
+            className="px-3 py-1 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-100 disabled:opacity-50 transition-colors"
+          >
+            {exporting ? 'Exporting...' : 'Export Markdown'}
+          </button>
+        </div>
+      ) : null}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {!messages?.length && !isStreaming && (
           <div className="flex-1 flex items-center justify-center h-full text-slate-400 text-sm">

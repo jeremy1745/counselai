@@ -58,6 +58,23 @@ export const listConversations = (caseId: string) =>
 export const getMessages = (convId: string) =>
   request<Message[]>(`/conversations/${convId}/messages`)
 
+export const exportConversation = async (convId: string, format: 'pdf' | 'markdown') => {
+  const res = await fetch(`${BASE}/conversations/${convId}/export?format=${format}`)
+  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  const blob = await res.blob()
+  const disposition = res.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename="(.+)"/)
+  const filename = match ? match[1] : `conversation.${format === 'pdf' ? 'pdf' : 'md'}`
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export const sendMessage = async (convId: string, content: string) => {
   const res = await fetch(`${BASE}/conversations/${convId}/messages`, {
     method: 'POST',

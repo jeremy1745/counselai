@@ -13,4 +13,5 @@ dependencies = [
     "qdrant-client>=1.13",
     "pymupdf>=1.25",
     "python-multipart>=0.0.18",
+    "fpdf2>=2.8",
 ]
