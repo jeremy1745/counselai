@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 import pymupdf
@@ -24,7 +23,8 @@ def extract_pages(filepath: str) -> list[dict]:
     return pages
 
 
-async def _run_ingestion(doc_id: str):
+async def ingest_document(doc_id: str):
+    """Run the full ingestion pipeline for a document."""
     async with async_session() as db:
         doc = await db.get(Document, doc_id)
         if not doc:
@@ -74,8 +74,3 @@ async def _run_ingestion(doc_id: str):
             doc.status = "failed"
             doc.error_message = str(e)[:500]
             await db.commit()
-
-
-def ingest_document(doc_id: str):
-    """Entry point for BackgroundTasks — runs the async ingestion in a new event loop."""
-    asyncio.run(_run_ingestion(doc_id))

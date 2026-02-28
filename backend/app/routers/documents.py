@@ -1,7 +1,7 @@
+import asyncio
 import os
-import shutil
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +18,6 @@ router = APIRouter(tags=["documents"])
 async def upload_documents(
     case_id: str,
     files: list[UploadFile],
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     case = await db.get(Case, case_id)
@@ -58,7 +57,7 @@ async def upload_documents(
     from app.services.ingestion import ingest_document
 
     for doc in docs:
-        background_tasks.add_task(ingest_document, doc.id)
+        asyncio.create_task(ingest_document(doc.id))
 
     return docs
 
