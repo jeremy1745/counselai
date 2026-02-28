@@ -1,0 +1,88 @@
+import os
+import shutil
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, BackgroundTasks
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
+from app.database import get_db
+from app.models.case import Case
+from app.models.document import Document
+from app.schemas.document import DocumentResponse
+
+router = APIRouter(tags=["documents"])
+
+
+@router.post("/cases/{case_id}/documents", response_model=list[DocumentResponse], status_code=201)
+async def upload_documents(
+    case_id: str,
+    files: list[UploadFile],
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    case = await db.get(Case, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    docs = []
+    for file in files:
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail=f"Only PDF files are accepted: {file.filename}")
+
+        doc = Document(
+            case_id=case_id,
+            filename=file.filename,
+            filepath="",
+            file_size=0,
+        )
+        db.add(doc)
+        await db.flush()
+
+        upload_dir = os.path.join(settings.upload_dir, case_id)
+        os.makedirs(upload_dir, exist_ok=True)
+        filepath = os.path.join(upload_dir, f"{doc.id}.pdf")
+
+        with open(filepath, "wb") as f:
+            content = await file.read()
+            f.write(content)
+
+        doc.filepath = filepath
+        doc.file_size = len(content)
+        docs.append(doc)
+
+    await db.commit()
+    for doc in docs:
+        await db.refresh(doc)
+
+    from app.services.ingestion import ingest_document
+
+    for doc in docs:
+        background_tasks.add_task(ingest_document, doc.id)
+
+    return docs
+
+
+@router.get("/cases/{case_id}/documents", response_model=list[DocumentResponse])
+async def list_documents(case_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Document).where(Document.case_id == case_id).order_by(Document.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+@router.delete("/cases/{case_id}/documents/{doc_id}", status_code=204)
+async def delete_document(case_id: str, doc_id: str, db: AsyncSession = Depends(get_db)):
+    doc = await db.get(Document, doc_id)
+    if not doc or doc.case_id != case_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if os.path.exists(doc.filepath):
+        os.remove(doc.filepath)
+
+    from app.services.vector_store import delete_document_vectors
+
+    delete_document_vectors(doc_id)
+
+    await db.delete(doc)
+    await db.commit()
