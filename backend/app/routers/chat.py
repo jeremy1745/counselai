@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,9 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
+from app.dependencies import require_superadmin
 from app.models.case import Case
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.user import User
 from app.schemas.chat import (
     ConversationCreate,
     ConversationResponse,
@@ -42,10 +45,17 @@ async def create_conversation(
 
 
 @router.get("/cases/{case_id}/conversations", response_model=list[ConversationResponse])
-async def list_conversations(case_id: str, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Conversation).where(Conversation.case_id == case_id).order_by(Conversation.created_at.desc())
+async def list_conversations(
+    case_id: str, include_archived: bool = False, db: AsyncSession = Depends(get_db)
+):
+    query = (
+        select(Conversation)
+        .where(Conversation.case_id == case_id)
+        .order_by(Conversation.created_at.desc())
     )
+    if not include_archived:
+        query = query.where(Conversation.archived_at.is_(None))
+    result = await db.execute(query)
     return result.scalars().all()
 
 
@@ -164,6 +174,49 @@ async def send_message(conv_id: str, body: MessageCreate, db: AsyncSession = Dep
                     await save_db.commit()
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.delete("/conversations/{conv_id}", status_code=204)
+async def delete_conversation(
+    conv_id: str,
+    _user: User = Depends(require_superadmin),
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await db.get(Conversation, conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    await db.delete(conv)
+    await db.commit()
+
+
+@router.patch("/conversations/{conv_id}/archive", response_model=ConversationResponse)
+async def archive_conversation(
+    conv_id: str,
+    _user: User = Depends(require_superadmin),
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await db.get(Conversation, conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv.archived_at = datetime.now(timezone.utc)
+    await db.commit()
+    await db.refresh(conv)
+    return conv
+
+
+@router.patch("/conversations/{conv_id}/unarchive", response_model=ConversationResponse)
+async def unarchive_conversation(
+    conv_id: str,
+    _user: User = Depends(require_superadmin),
+    db: AsyncSession = Depends(get_db),
+):
+    conv = await db.get(Conversation, conv_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conv.archived_at = None
+    await db.commit()
+    await db.refresh(conv)
+    return conv
 
 
 async def _get_session():

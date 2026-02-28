@@ -1,10 +1,15 @@
-import type { Case, Conversation, Document, Message } from '../types'
+import type { Case, Conversation, Document, Message, User } from '../types'
 
 const BASE = '/api'
 
+function authHeaders(): Record<string, string> {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: { 'Content-Type': 'application/json', ...authHeaders(), ...init?.headers },
     ...init,
   })
   if (!res.ok) {
@@ -15,16 +20,38 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
+// Auth
+export const register = (email: string, password: string) =>
+  request<{ access_token: string; user: User }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+
+export const login = (email: string, password: string) =>
+  request<{ access_token: string; user: User }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+
+export const getMe = () => request<User>('/auth/me')
+
 // Cases
 export const createCase = (data: { name: string; description?: string }) =>
   request<Case>('/cases', { method: 'POST', body: JSON.stringify(data) })
 
-export const listCases = () => request<Case[]>('/cases')
+export const listCases = (includeArchived = false) =>
+  request<Case[]>(`/cases?include_archived=${includeArchived}`)
 
 export const getCase = (id: string) => request<Case>(`/cases/${id}`)
 
 export const deleteCase = (id: string) =>
   request<void>(`/cases/${id}`, { method: 'DELETE' })
+
+export const archiveCase = (id: string) =>
+  request<Case>(`/cases/${id}/archive`, { method: 'PATCH' })
+
+export const unarchiveCase = (id: string) =>
+  request<Case>(`/cases/${id}/unarchive`, { method: 'PATCH' })
 
 // Documents
 export const uploadDocuments = async (caseId: string, files: File[]): Promise<Document[]> => {
@@ -32,6 +59,7 @@ export const uploadDocuments = async (caseId: string, files: File[]): Promise<Do
   files.forEach((f) => formData.append('files', f))
   const res = await fetch(`${BASE}/cases/${caseId}/documents`, {
     method: 'POST',
+    headers: authHeaders(),
     body: formData,
   })
   if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
@@ -51,15 +79,26 @@ export const createConversation = (caseId: string, title?: string) =>
     body: JSON.stringify({ title: title || 'New Conversation' }),
   })
 
-export const listConversations = (caseId: string) =>
-  request<Conversation[]>(`/cases/${caseId}/conversations`)
+export const listConversations = (caseId: string, includeArchived = false) =>
+  request<Conversation[]>(`/cases/${caseId}/conversations?include_archived=${includeArchived}`)
+
+export const deleteConversation = (convId: string) =>
+  request<void>(`/conversations/${convId}`, { method: 'DELETE' })
+
+export const archiveConversation = (convId: string) =>
+  request<Conversation>(`/conversations/${convId}/archive`, { method: 'PATCH' })
+
+export const unarchiveConversation = (convId: string) =>
+  request<Conversation>(`/conversations/${convId}/unarchive`, { method: 'PATCH' })
 
 // Messages
 export const getMessages = (convId: string) =>
   request<Message[]>(`/conversations/${convId}/messages`)
 
 export const exportConversation = async (convId: string, format: 'pdf' | 'markdown') => {
-  const res = await fetch(`${BASE}/conversations/${convId}/export?format=${format}`)
+  const res = await fetch(`${BASE}/conversations/${convId}/export?format=${format}`, {
+    headers: authHeaders(),
+  })
   if (!res.ok) throw new Error(`Export failed: ${res.status}`)
   const blob = await res.blob()
   const disposition = res.headers.get('Content-Disposition') || ''
@@ -78,7 +117,7 @@ export const exportConversation = async (convId: string, format: 'pdf' | 'markdo
 export const sendMessage = async (convId: string, content: string) => {
   const res = await fetch(`${BASE}/conversations/${convId}/messages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ content }),
   })
   if (!res.ok) throw new Error(`Send failed: ${res.status}`)

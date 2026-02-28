@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     chunk_overlap: int = 64
     top_k: int = 10
     qdrant_collection: str = "counselai_chunks"
+    secret_key: str = "dev-secret-change-in-production"
 
 
 settings = Settings()

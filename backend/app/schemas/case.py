@@ -14,5 +14,6 @@ class CaseResponse(BaseModel):
     description: str
     created_at: datetime
     updated_at: datetime
+    archived_at: datetime | None = None
 
     model_config = {"from_attributes": True}

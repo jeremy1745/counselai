@@ -3,5 +3,6 @@ from app.models.case import Case
 from app.models.document import Document
 from app.models.conversation import Conversation
 from app.models.message import Message
+from app.models.user import User
 
-__all__ = ["Base", "Case", "Document", "Conversation", "Message"]
+__all__ = ["Base", "Case", "Document", "Conversation", "Message", "User"]

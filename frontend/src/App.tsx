@@ -1,17 +1,43 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import CaseList from './components/CaseList'
 import CaseDetail from './components/CaseDetail'
+import LoginPage from './components/LoginPage'
+
+function AppRoutes() {
+  const { user, loading } = useAuth()
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading...</div>
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
+  }
+
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<CaseList />} />
+        <Route path="/cases/:caseId/*" element={<CaseDetail />} />
+      </Route>
+      <Route path="/login" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<CaseList />} />
-          <Route path="/cases/:caseId/*" element={<CaseDetail />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

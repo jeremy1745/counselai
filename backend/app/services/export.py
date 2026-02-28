@@ -111,25 +111,51 @@ def generate_pdf(
 
         # Table header
         col_w = [12, 55, 25, 98]
+        row_h = 7
         pdf.set_font("Helvetica", "B", 9)
         pdf.set_fill_color(241, 245, 249)  # slate-100
-        pdf.cell(col_w[0], 7, "#", border=1, fill=True)
-        pdf.cell(col_w[1], 7, "Document", border=1, fill=True)
-        pdf.cell(col_w[2], 7, "Pages", border=1, fill=True)
-        pdf.cell(col_w[3], 7, "Excerpt", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(col_w[0], row_h, "#", border=1, fill=True)
+        pdf.cell(col_w[1], row_h, "Document", border=1, fill=True)
+        pdf.cell(col_w[2], row_h, "Pages", border=1, fill=True)
+        pdf.cell(col_w[3], row_h, "Excerpt", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
 
         pdf.set_font("Helvetica", "", 8)
         for c in citations:
             idx = str(c.get("source_index", ""))
             doc = c.get("document_name", "")[:30]
             pages = ", ".join(str(p) for p in c.get("page_numbers", []))
-            snippet = c.get("snippet", "")[:80].replace("\n", " ")
+            snippet = c.get("snippet", "").replace("\n", " ")
             safe_snippet = snippet.encode("latin-1", errors="replace").decode("latin-1")
             safe_doc = doc.encode("latin-1", errors="replace").decode("latin-1")
 
-            pdf.cell(col_w[0], 6, idx, border=1)
-            pdf.cell(col_w[1], 6, safe_doc, border=1)
-            pdf.cell(col_w[2], 6, pages, border=1)
-            pdf.cell(col_w[3], 6, safe_snippet, border=1, new_x="LMARGIN", new_y="NEXT")
+            # Calculate the height needed for the excerpt multi_cell
+            x_start = pdf.get_x()
+            y_start = pdf.get_y()
+
+            # Measure excerpt height by rendering it off-screen
+            pdf.set_xy(x_start + col_w[0] + col_w[1] + col_w[2], y_start)
+            pdf.multi_cell(col_w[3], 5, safe_snippet, border=0, split_only=True)
+            # Count lines to determine row height
+            lines = pdf.multi_cell(col_w[3], 5, safe_snippet, border=0, split_only=True)
+            line_count = len(lines) if lines else 1
+            computed_row_h = max(6, line_count * 5)
+
+            # Reset position and draw the row
+            pdf.set_xy(x_start, y_start)
+
+            # Draw bordered cells for first 3 columns at the computed height
+            # Use cell for fixed-width columns, manually draw borders
+            pdf.cell(col_w[0], computed_row_h, idx, border=1)
+            pdf.cell(col_w[1], computed_row_h, safe_doc, border=1)
+            pdf.cell(col_w[2], computed_row_h, pages, border=1)
+
+            # Draw the excerpt with multi_cell for wrapping
+            excerpt_x = pdf.get_x()
+            excerpt_y = pdf.get_y()
+            # Draw border rect manually, then fill with multi_cell
+            pdf.rect(excerpt_x, excerpt_y, col_w[3], computed_row_h)
+            pdf.set_xy(excerpt_x + 1, excerpt_y + 0.5)
+            pdf.multi_cell(col_w[3] - 2, 5, safe_snippet, border=0)
+            pdf.set_xy(x_start, y_start + computed_row_h)
 
     return bytes(pdf.output())

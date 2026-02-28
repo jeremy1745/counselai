@@ -1,9 +1,16 @@
+export interface User {
+  id: string
+  email: string
+  role: 'user' | 'superadmin'
+}
+
 export interface Case {
   id: string
   name: string
   description: string
   created_at: string
   updated_at: string
+  archived_at: string | null
 }
 
 export interface Document {
@@ -22,6 +29,7 @@ export interface Conversation {
   case_id: string
   title: string
   created_at: string
+  archived_at: string | null
 }
 
 export interface Citation {

@@ -15,6 +15,7 @@ class Case(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, default=None)
 
     documents = relationship("Document", back_populates="case", cascade="all, delete-orphan")
     conversations = relationship("Conversation", back_populates="case", cascade="all, delete-orphan")
