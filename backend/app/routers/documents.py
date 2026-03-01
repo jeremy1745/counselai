@@ -41,10 +41,10 @@ async def upload_documents(
 
     docs = []
     for file in files:
-        if not file.filename or not file.filename.lower().endswith(".pdf"):
+        content = await file.read()
+        if not content[:5].startswith(b"%PDF-"):
             raise HTTPException(status_code=400, detail=f"Only PDF files are accepted: {file.filename}")
 
-        content = await file.read()
         if len(content) > max_bytes:
             raise HTTPException(status_code=413, detail=f"File exceeds {settings.max_upload_size_mb}MB limit: {file.filename}")
 

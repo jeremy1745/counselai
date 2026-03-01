@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     secret_key: str
     allowed_origins: str = "http://localhost:3000"
     access_token_expire_minutes: int = 480
-    max_upload_size_mb: int = 50
+    max_upload_size_mb: int = 300
     max_failed_logins: int = 5
     lockout_duration_minutes: int = 15
 
