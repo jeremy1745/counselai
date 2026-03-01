@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.dependencies import require_superadmin
+from app.dependencies import get_current_user, require_superadmin
 from app.models.case import Case
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -32,7 +32,7 @@ router = APIRouter(tags=["chat"])
 
 @router.post("/cases/{case_id}/conversations", response_model=ConversationResponse, status_code=201)
 async def create_conversation(
-    case_id: str, body: ConversationCreate, db: AsyncSession = Depends(get_db)
+    case_id: str, body: ConversationCreate, _user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     case = await db.get(Case, case_id)
     if not case:
@@ -46,7 +46,7 @@ async def create_conversation(
 
 @router.get("/cases/{case_id}/conversations", response_model=list[ConversationResponse])
 async def list_conversations(
-    case_id: str, include_archived: bool = False, db: AsyncSession = Depends(get_db)
+    case_id: str, include_archived: bool = False, _user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     query = (
         select(Conversation)
@@ -60,7 +60,7 @@ async def list_conversations(
 
 
 @router.get("/conversations/{conv_id}/messages", response_model=list[MessageResponse])
-async def get_messages(conv_id: str, db: AsyncSession = Depends(get_db)):
+async def get_messages(conv_id: str, _user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     conv = await db.get(Conversation, conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -86,6 +86,7 @@ async def get_messages(conv_id: str, db: AsyncSession = Depends(get_db)):
 async def export_conversation(
     conv_id: str,
     format: str = Query(..., pattern="^(pdf|markdown)$"),
+    _user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     conv = await db.get(Conversation, conv_id)
@@ -117,7 +118,7 @@ async def export_conversation(
 
 
 @router.post("/conversations/{conv_id}/messages")
-async def send_message(conv_id: str, body: MessageCreate, db: AsyncSession = Depends(get_db)):
+async def send_message(conv_id: str, body: MessageCreate, _user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     conv = await db.get(Conversation, conv_id)
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")

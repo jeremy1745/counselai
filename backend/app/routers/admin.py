@@ -6,6 +6,7 @@ from app.database import get_db
 from app.dependencies import require_superadmin
 from app.models.user import User
 from app.schemas.auth import UserResponse
+from app.services.security_logger import log_admin_action
 
 router = APIRouter(tags=["admin"])
 
@@ -33,13 +34,14 @@ async def disable_user(
     user.is_disabled = True
     await db.commit()
     await db.refresh(user)
+    log_admin_action(admin.email, "disable_user", user_id)
     return user
 
 
 @router.patch("/admin/users/{user_id}/enable", response_model=UserResponse)
 async def enable_user(
     user_id: str,
-    _admin: User = Depends(require_superadmin),
+    admin: User = Depends(require_superadmin),
     db: AsyncSession = Depends(get_db),
 ):
     user = await db.get(User, user_id)
@@ -48,6 +50,7 @@ async def enable_user(
     user.is_disabled = False
     await db.commit()
     await db.refresh(user)
+    log_admin_action(admin.email, "enable_user", user_id)
     return user
 
 
@@ -65,4 +68,5 @@ async def force_password_change(
     user.force_password_change = True
     await db.commit()
     await db.refresh(user)
+    log_admin_action(admin.email, "force_password_change", user_id)
     return user

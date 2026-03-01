@@ -2,9 +2,19 @@ import type { Case, Conversation, Document, Message, User } from '../types'
 
 const BASE = '/api'
 
+const AUTH_PATHS = ['/auth/login', '/auth/register']
+
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem('token')
   return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function handleUnauthorized(path: string): void {
+  if (!AUTH_PATHS.some((p) => path.startsWith(p))) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    window.location.href = '/login'
+  }
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -13,6 +23,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   })
   if (!res.ok) {
+    if (res.status === 401) {
+      handleUnauthorized(path)
+    }
     const body = await res.text()
     throw new Error(`API error ${res.status}: ${body}`)
   }
@@ -80,7 +93,10 @@ export const uploadDocuments = async (caseId: string, files: File[]): Promise<Do
     headers: authHeaders(),
     body: formData,
   })
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`)
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized('/cases')
+    throw new Error(`Upload failed: ${res.status}`)
+  }
   return res.json()
 }
 
@@ -117,7 +133,10 @@ export const exportConversation = async (convId: string, format: 'pdf' | 'markdo
   const res = await fetch(`${BASE}/conversations/${convId}/export?format=${format}`, {
     headers: authHeaders(),
   })
-  if (!res.ok) throw new Error(`Export failed: ${res.status}`)
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized('/conversations')
+    throw new Error(`Export failed: ${res.status}`)
+  }
   const blob = await res.blob()
   const disposition = res.headers.get('Content-Disposition') || ''
   const match = disposition.match(/filename="(.+)"/)
@@ -138,6 +157,9 @@ export const sendMessage = async (convId: string, content: string) => {
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
     body: JSON.stringify({ content }),
   })
-  if (!res.ok) throw new Error(`Send failed: ${res.status}`)
+  if (!res.ok) {
+    if (res.status === 401) handleUnauthorized('/conversations')
+    throw new Error(`Send failed: ${res.status}`)
+  }
   return res
 }
